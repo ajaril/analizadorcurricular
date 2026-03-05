@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Analizador Curricular AI | LOMLOE Maestro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0f14;
+            --surface: #13161e;
+            --surface2: #1a1e2a;
+            --border: rgba(255,255,255,0.07);
+            --accent: #4f8ef7;
+            --accent2: #7c5fe6;
+            --accent-google: #34a853;
+            --accent-free: #f59e0b;
+            --text: #e2e8f0;
+            --text-muted: #64748b;
+            --text-dim: #94a3b8;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed; inset: 0; z-index: 0;
+            background: radial-gradient(ellipse 80% 60% at 20% -10%, rgba(79,142,247,0.08) 0%, transparent 60%),
+                        radial-gradient(ellipse 60% 50% at 80% 110%, rgba(124,95,230,0.07) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        /* Loader */
+        .loader { border: 2px solid rgba(79,142,247,0.2); border-top: 2px solid var(--accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 0.7s linear infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Cards */
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+        .card-inner { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; }
+
+        /* Nav */
+        nav { background: rgba(13,15,20,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+
+        /* Step badge */
+        .step-badge { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; flex-shrink: 0; }
+
+        /* Provider tabs */
+        .tab-btn { padding: 6px 14px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; transition: all 0.2s; cursor: pointer; border: none; }
+        .tab-btn.active-or { background: linear-gradient(135deg, #3b82f6, #6366f1); color: white; box-shadow: 0 2px 12px rgba(79,142,247,0.35); }
+        .tab-btn.active-google { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; box-shadow: 0 2px 12px rgba(52,168,83,0.35); }
+        .tab-btn.active-free { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; box-shadow: 0 2px 12px rgba(245,158,11,0.35); }
+        .tab-btn.inactive { background: rgba(255,255,255,0.05); color: var(--text-dim); }
+        .tab-btn.inactive:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+
+        /* Inputs */
+        input, select, textarea {
+            background: rgba(255,255,255,0.04) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: var(--text) !important;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input::placeholder, textarea::placeholder { color: var(--text-muted) !important; }
+        input:focus, select:focus, textarea:focus {
+            border-color: rgba(79,142,247,0.5) !important;
+            box-shadow: 0 0 0 3px rgba(79,142,247,0.1) !important;
+            outline: none !important;
+            background: rgba(255,255,255,0.06) !important;
+        }
+        select option { background: #1a1e2a; color: var(--text); }
+
+        /* Main CTA button */
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            color: white; font-weight: 700; border: none; cursor: pointer;
+            border-radius: 12px; transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(79,142,247,0.3);
+            position: relative; overflow: hidden;
+        }
+        .btn-primary::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .btn-primary:hover::before { opacity: 1; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(79,142,247,0.4); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Small buttons */
+        .btn-sm { padding: 7px 14px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-or { background: linear-gradient(135deg, #3b82f6, #6366f1); color: white; }
+        .btn-or:hover { filter: brightness(1.1); }
+        .btn-google { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
+        .btn-google:hover { filter: brightness(1.1); }
+        .btn-free { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .btn-free:hover { filter: brightness(1.1); }
+
+        /* Status dot */
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; flex-shrink: 0; }
+        .status-idle { background: #475569; }
+        .status-checking { background: #f59e0b; animation: pulse 1s infinite; }
+        .status-ok { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+        .status-error { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        /* Info strips */
+        .info-strip { border-radius: 10px; padding: 10px 14px; font-size: 0.75rem; display: flex; align-items: center; gap: 8px; }
+        .info-strip-or { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); color: #93c5fd; }
+        .info-strip-google { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #86efac; }
+        .info-strip-free { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #fcd34d; }
+
+        /* Free badge */
+        .free-badge { background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.15)); border: 1px solid rgba(245,158,11,0.3); color: #fcd34d; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; letter-spacing: 0.05em; }
+
+        /* Rubric table */
+        .rubrica-table { width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0; font-size: 0.78rem; }
+        .rubrica-table th { background: rgba(255,255,255,0.05); padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; color: var(--text-dim); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .rubrica-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; color: #cbd5e1; }
+        .rubrica-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .score-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; color: white; font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; }
+
+        /* Badge criterio */
+        .badge-criterio { background: rgba(79,142,247,0.15); color: #93c5fd; border: 1px solid rgba(79,142,247,0.25); font-size: 0.67rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; font-family: 'JetBrains Mono', monospace; }
+
+        /* Error boxes */
+        .error-detail { background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 12px; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #fca5a5; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
+        .error-tip { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; padding: 10px; margin-top: 8px; font-size: 0.78rem; color: #fcd34d; }
+
+        /* Exercise cards */
+        .ex-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: border-color 0.2s; }
+        .ex-card:hover { border-color: rgba(79,142,247,0.2); }
+        .ex-card-header { background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.1)); border-bottom: 1px solid var(--border); padding: 14px 18px; display: flex; align-items: center; gap: 10px; }
+
+        /* Apt block */
+        .apt-block { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+        .apt-header { background: rgba(59,130,246,0.08); border-bottom: 1px solid rgba(59,130,246,0.12); padding: 8px 14px; }
+
+        /* Export buttons */
+        .btn-export-csv { background: linear-gradient(135deg, #16a34a, #15803d); color: white; padding: 9px 18px; border-radius: 10px; font-size: 0.78rem; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap-7px; transition: all 0.2s; gap: 7px; }
+        .btn-export-csv:hover { filter: brightness(1.15); transform: translateY(-1px); }
+        .btn-export-pdf { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; padding: 9px 18px; border-radius: 10px; font-size: 0.78rem; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: all 0.2s; }
+        .btn-export-pdf:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+        /* File chip */
+        .file-chip { display: flex; align-items: center; gap: 6px; background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.2); color: #93c5fd; padding: 5px 10px; border-radius: 20px; font-size: 0.72rem; }
+
+        /* Section titles */
+        .section-title { font-size: 0.95rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+
+        /* Rubricas table header colors */
+        .th-4 { background: rgba(22,163,74,0.12) !important; color: #86efac !important; }
+        .th-3 { background: rgba(59,130,246,0.12) !important; color: #93c5fd !important; }
+        .th-2 { background: rgba(234,179,8,0.12) !important; color: #fde047 !important; }
+        .th-1 { background: rgba(249,115,22,0.12) !important; color: #fdba74 !important; }
+        .th-0 { background: rgba(239,68,68,0.12) !important; color: #fca5a5 !important; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        /* Fade-in */
+        @keyframes fadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+        .fade-up { animation: fadeUp 0.4s ease both; }
+        .fade-up-2 { animation: fadeUp 0.4s ease 0.1s both; }
+        .fade-up-3 { animation: fadeUp 0.4s ease 0.2s both; }
+
+        /* Disabled section */
+        .disabled-section { opacity: 0.35; pointer-events: none; }
+        @media (max-width: 640px) {
+            .responsive-grid { grid-template-columns: 1fr !important; }
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col relative">
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;">
+
+    <nav class="sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Logo -->
+            <div class="flex items-center gap-3 shrink-0">
+                <div style="background:linear-gradient(135deg,#3b82f6,#7c5fe6);padding:9px;border-radius:10px;box-shadow:0 4px 14px rgba(79,142,247,0.3)">
+                    <i class="fas fa-brain" style="color:white;font-size:1rem;"></i>
+                </div>
+                <div>
+                    <h1 style="font-size:1rem;font-weight:800;color:white;line-height:1.2;">Analizador Curricular</h1>
+                    <p style="display:flex;align-items:center;font-size:0.68rem;font-family:'JetBrains Mono',monospace;">
+                        <span id="api-status-icon" class="status-dot status-idle"></span>
+                        <span id="api-status" style="color:var(--text-muted);">Esperando API Key...</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Provider toggle + inputs -->
+            <div style="display:flex;flex-grow:1;max-width:800px;align-items:center;gap:8px;flex-wrap:wrap;">
+                <!-- Tabs -->
+                <div style="display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:3px;flex-shrink:0;">
+                    <button id="tabOR" class="tab-btn active-or" onclick="switchProvider('openrouter')">
+                        <i class="fas fa-route mr-1"></i>OpenRouter
+                    </button>
+                    <button id="tabGoogle" class="tab-btn inactive" onclick="switchProvider('google')">
+                        <i class="fab fa-google mr-1"></i>Google AI
+                    </button>
+                    <button id="tabFree" class="tab-btn inactive" onclick="switchProvider('free')">
+                        <i class="fas fa-star mr-1"></i>Gratis
+                        <span class="free-badge ml-1">FREE</span>
+                    </button>
+                </div>
+
+                <!-- OpenRouter panel -->
+                <div id="panelOR" style="display:flex;flex-grow:1;gap:7px;align-items:center;flex-wrap:wrap;">
+                    <div style="position:relative;flex-grow:1;min-width:180px;">
+                        <input type="password" id="apiKeyInput" placeholder="sk-or-v1-... (OpenRouter)"
+                            style="font-size:0.75rem;padding:8px 32px 8px 10px;width:100%;"
+                            oninput="onApiKeyInput()">
+                        <button onclick="toggleKeyVisibility('apiKeyInput','eyeIcon')"
+                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.75rem;">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                    <select id="modelSelect" style="font-size:0.75rem;padding:8px 10px;width:220px;flex-shrink:0;"><option value="">Modelos...</option></select>
+                    <button onclick="updateConfig()" id="connectBtn" class="btn-sm btn-or" style="flex-shrink:0;">
+                        <i class="fas fa-plug mr-1"></i>Conectar
+                    </button>
+                </div>
+
+                <!-- Google AI panel -->
+                <div id="panelGoogle" style="display:none;flex-grow:1;gap:7px;align-items:center;flex-wrap:wrap;">
+                    <div style="position:relative;flex-grow:1;min-width:180px;">
+                        <input type="password" id="googleKeyInput" placeholder="AIza... (Google AI API Key)"
+                            style="font-size:0.75rem;padding:8px 32px 8px 10px;width:100%;"
+                            oninput="onGoogleKeyInput()">
+                        <button onclick="toggleKeyVisibility('googleKeyInput','eyeIconGoogle')"
+                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.75rem;">
+                            <i class="fas fa-eye" id="eyeIconGoogle"></i>
+                        </button>
+                    </div>
+                    <select id="googleModelSelect" style="font-size:0.75rem;padding:8px 10px;width:220px;flex-shrink:0;"><option value="">Modelos...</option></select>
+                    <button onclick="connectGoogle()" id="connectGoogleBtn" class="btn-sm btn-google" style="flex-shrink:0;">
+                        <i class="fas fa-plug mr-1"></i>Conectar
+                    </button>
+                </div>
+
+                <!-- Free panel (Gemini Flash gratis) -->
+                <div id="panelFree" style="display:none;flex-grow:1;gap:7px;align-items:center;flex-wrap:wrap;">
+                    <div style="position:relative;flex-grow:1;min-width:180px;">
+                        <input type="password" id="freeKeyInput" placeholder="AIza... (Google AI Studio — capa GRATIS)"
+                            style="font-size:0.75rem;padding:8px 32px 8px 10px;width:100%;border-color:rgba(245,158,11,0.3)!important;"
+                            oninput="onFreeKeyInput()">
+                        <button onclick="toggleKeyVisibility('freeKeyInput','eyeIconFree')"
+                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.75rem;">
+                            <i class="fas fa-eye" id="eyeIconFree"></i>
+                        </button>
+                    </div>
+                    <div style="font-size:0.72rem;color:#fcd34d;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:7px 10px;flex-shrink:0;max-width:260px;">
+                        <i class="fas fa-gift mr-1"></i>
+                        Usa <b>Gemini 2.0 Flash</b> — <b>100% gratis</b> con clave de 
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#fbbf24;text-decoration:underline;">aistudio.google.com</a>
+                    </div>
+                    <button onclick="connectFree()" id="connectFreeBtn" class="btn-sm btn-free" style="flex-shrink:0;">
+                        <i class="fas fa-bolt mr-1"></i>Activar gratis
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info strips -->
+        <div id="keyInfoStrip" class="hidden mx-4 mb-2 info-strip info-strip-or">
+            <i class="fas fa-info-circle" style="flex-shrink:0;"></i>
+            <span>Consigue tu clave en <a href="https://openrouter.ai/keys" target="_blank" style="font-weight:700;text-decoration:underline;">openrouter.ai/keys</a>
+            (empieza por <code style="font-family:'JetBrains Mono',monospace;background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;">sk-or-</code>). Acceso a Gemini, Claude, GPT y más.</span>
+            <button onclick="this.parentElement.classList.add('hidden')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:0.6;"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="googleInfoStrip" class="hidden mx-4 mb-2 info-strip info-strip-google">
+            <i class="fas fa-info-circle" style="flex-shrink:0;"></i>
+            <span>Consigue tu clave en <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-weight:700;text-decoration:underline;">aistudio.google.com/app/apikey</a>
+            (empieza por <code style="font-family:'JetBrains Mono',monospace;background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;">AIza</code>). Capa gratuita disponible.</span>
+            <button onclick="this.parentElement.classList.add('hidden')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:0.6;"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="freeInfoStrip" class="hidden mx-4 mb-2 info-strip info-strip-free">
+            <i class="fas fa-star" style="flex-shrink:0;"></i>
+            <span>La clave de Google AI Studio es <b>100% gratuita</b> — 1500 peticiones/día con Gemini 2.0 Flash. Sin tarjeta de crédito. Obtén tu clave en <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-weight:700;text-decoration:underline;">aistudio.google.com</a>.</span>
+            <button onclick="this.parentElement.classList.add('hidden')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:0.6;"><i class="fas fa-times"></i></button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-6 max-w-6xl flex-grow space-y-5" style="position:relative;z-index:1;">
+        
+        <!-- Step 1: Subject -->
+        <section class="card p-5 fade-up">
+            <div class="section-title">
+                <span class="step-badge">1</span>
+                Selección de Asignatura <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;">(Normativa LOMLOE)</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-left:38px;" class="responsive-grid">
+                <select id="courseSelect" style="padding:10px 12px;font-size:0.85rem;"><option value="">Selecciona curso...</option></select>
+                <select id="subjectSelect" disabled style="padding:10px 12px;font-size:0.85rem;opacity:0.5;"><option value="">Elige materia...</option></select>
+            </div>
+            <div id="json-status" style="margin-left:38px;margin-top:12px;font-size:0.82rem;font-weight:600;min-height:24px;"></div>
+        </section>
+
+        <!-- Step 2: Material -->
+        <section id="inputSection" class="card p-5 disabled-section fade-up-2" style="transition:opacity 0.3s;">
+            <div class="section-title">
+                <span class="step-badge">2</span>
+                Material a Analizar
+                <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400;">(Texto o PDF/Imagen)</span>
+            </div>
+            <div style="margin-left:38px;display:flex;flex-direction:column;gap:12px;">
+                <textarea id="ejerciciosInput" rows="6" style="padding:14px;font-size:0.85rem;resize:vertical;line-height:1.6;" placeholder="Pega el examen aquí o adjunta un archivo abajo..."></textarea>
+                
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <label style="cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);padding:8px 14px;border-radius:9px;font-size:0.78rem;display:flex;align-items:center;gap:7px;color:var(--text-dim);transition:all 0.2s;" 
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                        <i class="fas fa-file-pdf" style="color:#f87171;"></i> Adjuntar PDF / Imágenes
+                        <input type="file" id="fileInput" accept="image/*, application/pdf" multiple style="display:none;"/>
+                    </label>
+                    <div id="filesStatus" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                </div>
+
+                <button id="analizarBtn" class="btn-primary" style="padding:14px;font-size:0.9rem;letter-spacing:0.02em;">
+                    <i class="fas fa-brain mr-2"></i> EJECUTAR ANÁLISIS CURRICULAR COMPLETO
+                </button>
+            </div>
+        </section>
+
+        <!-- Results -->
+        <section id="resultadosSection" class="hidden space-y-5 fade-up-3">
+            <!-- Export bar -->
+            <div class="card p-4" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+                <div>
+                    <p style="font-weight:700;font-size:0.9rem;color:var(--text);">Informe generado</p>
+                    <p style="font-size:0.75rem;color:var(--text-muted);">Descarga el análisis completo o solo la rúbrica</p>
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="exportCSV()" class="btn-export-csv">
+                        <i class="fas fa-file-csv"></i> Descargar Rúbrica CSV
+                    </button>
+                    <button onclick="exportPDF()" class="btn-export-pdf">
+                        <i class="fas fa-file-pdf"></i> Descargar Informe PDF
+                    </button>
+                </div>
+            </div>
+            <!-- Results container -->
+            <div id="resultadosContainer" class="space-y-5"></div>
+            <!-- Global rubric -->
+            <div id="rubricaGlobalSection" class="hidden">
+                <div class="card" style="overflow:hidden;">
+                    <div style="background:linear-gradient(135deg,rgba(30,35,55,1),rgba(20,24,40,1));padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);">
+                        <i class="fas fa-table" style="color:var(--text-muted);"></i>
+                        <h3 style="font-weight:700;color:white;font-size:0.9rem;">📋 Rúbrica Completa — Todos los apartados</h3>
+                    </div>
+                    <div style="overflow-x:auto;" id="rubricaGlobalContainer"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+    </div>
+
+
+    <script>
+        // --- BASE DE DATOS Y ESTADO ---
+        const csvRawData = `CURSO,MATERIA,ENLACE COMPARTIR JSON
+1ºESO,Biología y Geología (1º ESO),https://drive.google.com/file/d/1IIB3ASuF8oMUORlXGy_bU8j1FoVXS-fh/view?usp=drivesdk
+1ºESO,Computación y Robótica (1º ESO),https://drive.google.com/file/d/1oMTRbkyPPTDqs9oWUMUc-pfDd_NK270O/view?usp=drivesdk
+1ºESO,Cultura Clásica (1º ESO),https://drive.google.com/file/d/1I2n7aKUB9h3or4UAvpzcQ_yv03dypTaf/view?usp=drivesdk
+1ºESO,Educación Física (1º ESO),https://drive.google.com/file/d/1c3QK2QKDQAlFYb7j-8XZv0FzAnPtr6bu/view?usp=drivesdk
+1ºESO,Educación Plástica, Visual y Audiovisual (1º ESO),https://drive.google.com/file/d/1vFM2wT7WRTZBpkExIeI8eKNaGxlAfTOj/view?usp=drivesdk
+1ºESO,Geografía e Historia (1º ESO),https://drive.google.com/file/d/1f07ai_JJZ8-7XqZvjSN1EmqfutcMAm-Y/view?usp=drivesdk
+1ºESO,Lengua Castellana y Literatura (1º ESO),https://drive.google.com/file/d/1EPAnuxNKor0pkq7Fa8i48SK1AExvExfU/view?usp=drivesdk
+1ºESO,Lengua Extranjera (1º ESO),https://drive.google.com/file/d/1QlxiUX3CMz1q2n9OeuKa9IyeNCl2Fpte/view?usp=drivesdk
+1ºESO,Matemáticas (1º ESO),https://drive.google.com/file/d/1Yv0UthHJTER0AQKQK3tzKO1gcuP3phKL/view?usp=drivesdk
+1ºESO,Música (1º ESO),https://drive.google.com/file/d/1QfpLEyrH12B-w3XFSJwofkVU7GEL2p64/view?usp=drivesdk
+1ºESO,Oratoria y Debate (1º ESO),https://drive.google.com/file/d/1t33zcQMxEl3-MpNDw2doi7YPSs-7wjGK/view?usp=drivesdk
+2º ESO,Computación y Robótica (2º ESO),https://drive.google.com/file/d/1E6osM9RHrEETIh9o3L6FpuE2aQn-s_tp/view?usp=drivesdk
+2º ESO,Cultura Clásica (2º ESO),https://drive.google.com/file/d/1WdGcGdpkVDYx9SApwu-UhaL4dHiJW4Ib/view?usp=drivesdk
+2º ESO,Educación en Valores Cívicos y Éticos (2º ESO),https://drive.google.com/file/d/14ZdgyFdx_NNCa-Dd5ffJvz63D7t8_pTo/view?usp=drivesdk
+2º ESO,Educación Física (2º ESO),https://drive.google.com/file/d/1JU24aVdzrNxBlg37wSprqfFchu1ikhm1/view?usp=drivesdk
+2º ESO,Física y Química (2º ESO),https://drive.google.com/file/d/1K9bRq89tSGGHap1zRifXIryydpcL5FjS/view?usp=drivesdk
+2º ESO,Geografía e Historia (2º ESO),https://drive.google.com/file/d/1JyUXEjYAqAfX_8VMVh1PVbVxj0vwVdWR/view?usp=drivesdk
+2º ESO,Lengua Castellana y Literatura (2º ESO),https://drive.google.com/file/d/1FtcBvYKZHpVWfX9n-uYjqMG8UDKiC6_m/view?usp=drivesdk
+2º ESO,Lengua Extranjera (2º ESO),https://drive.google.com/file/d/1wohK9RPqUUvZfjwIAyvdiWrBUJeNqrv9/view?usp=drivesdk
+2º ESO,Matemáticas (2º ESO),https://drive.google.com/file/d/1V4XNOBcqIFQAU1MHQaRgkP4h10hsfWuH/view?usp=drivesdk
+2º ESO,Música (2º ESO),https://drive.google.com/file/d/1LDzRY2sOEbc0C-VnpiE8HWG1b3i42iYI/view?usp=drivesdk
+2º ESO,Oratoria y Debate (2º ESO),https://drive.google.com/file/d/1TWnVZOApg4C7glVPHT0jfBwmGsssUOe7/view?usp=drivesdk
+2º ESO,Proyecto de Educación Plástica y Audiovisual (2º ESO),https://drive.google.com/file/d/1goCUTBhhGLX2EDu6Ezjr0bm1KQPkAxbn/view?usp=drivesdk
+2º ESO,Tecnología y Digitalización (2º ESO),https://drive.google.com/file/d/1HxjPvC_YGXfkKegv9Oi5_ZXvirRDdveS/view?usp=drivesdk
+3º ESO,Biología y Geología (3º ESO),https://drive.google.com/file/d/1rGeJ1KlLPbvVjjVyGOOEtWpZZrZvWABj/view?usp=drivesdk
+3º ESO,Computación y Robótica (3º ESO),https://drive.google.com/file/d/1FOROE8Zb7sEBF_3iwv-THpvEjvm6DXb0/view?usp=drivesdk
+3º ESO,Cultura Clásica (3º ESO),https://drive.google.com/file/d/1-Qdr5YY0mF_L5LXaq9f0xTTFGh9V826S/view?usp=drivesdk
+3º ESO,Cultura del Flamenco (3º ESO),https://drive.google.com/file/d/1zX3dhXcjKaQLp09oQ5xLvrpMr_1EHlKu/view?usp=drivesdk
+3º ESO,Educación Física (3º ESO),https://drive.google.com/file/d/17s4vjaSV46y82jFQ8-M_X130g37NBZJ0/view?usp=drivesdk
+3º ESO,Educación Plástica, Visual y Audiovisual (3º ESO),https://drive.google.com/file/d/1Y3t506M26DHpYHzsypaWuGzdciitGR5U/view?usp=drivesdk
+3º ESO,Filosofía y Argumentación (3º ESO),https://drive.google.com/file/d/1Cjys7l-Q9PrzvzMLnOJck39cL-Z0kfeh/view?usp=drivesdk
+3º ESO,Física y Química (3º ESO),https://drive.google.com/file/d/1kvybIIyd6csuRDfrpmRydI4QLENb51qI/view?usp=drivesdk
+3º ESO,Geografía e Historia (3º ESO),https://drive.google.com/file/d/141iWbCIod04n-HM35jxCBqE-AI0S6-Lk/view?usp=drivesdk
+3º ESO,Iniciación a la Actividad Emprendedora y Empresarial (3º ESO),https://drive.google.com/file/d/1USbcDfRAMCSu0UmxdQIjS1QK5-MWFVKs/view?usp=drivesdk
+3º ESO,Lengua Castellana y Literatura (3º ESO),https://drive.google.com/file/d/1kcgv9nNtYqzSd7VZfCY9OEHMeRWQrqar/view?usp=drivesdk
+3º ESO,Lengua Extranjera (3º ESO),https://drive.google.com/file/d/1S_DoNQFmzapbjRAKAy3OVo8ONQRoR8IP/view?usp=drivesdk
+3º ESO,Matemáticas (3º ESO),https://drive.google.com/file/d/1KNjc30Jmd9voU1EEVilGd4ufq-AFZ7h7/view?usp=drivesdk
+3º ESO,Oratoria y Debate (3º ESO),https://drive.google.com/file/d/1bIOFopZR0hxTqfjsqMQ64u5GNPj4sj-5/view?usp=drivesdk
+3º ESO,Tecnología y Digitalización (3º ESO),https://drive.google.com/file/d/159F6juGbaMfNNTLcR8sAwKMEaa9vgvn4/view?usp=drivesdk
+4º ESO,Ampliación de Cultura Clásica (4º ESO),https://drive.google.com/file/d/1duuFJALuK5gJjEOwPaAyIF-xuItqa67b/view?usp=drivesdk
+4º ESO,Aprendizaje Social y Emocional (4º ESO),https://drive.google.com/file/d/1XymPHymKzcG_OTbGWa83hZ7k4eWliiil/view?usp=drivesdk
+4º ESO,Artes Escénicas y Danza (4º ESO),https://drive.google.com/file/d/1_zHj3m6_gk2G_T3dlSn6xy0JzvieeufD/view?usp=drivesdk
+4º ESO,Biología y Geología (4º ESO),https://drive.google.com/file/d/14jg1pUpTHkNAbLkiZXzss7PnEriIixl-/view?usp=drivesdk
+4º ESO,Cultura Científica (4º ESO),https://drive.google.com/file/d/1FqxYYnyaeAXVhXaeAK4utdK5bHgExYdU/view?usp=drivesdk
+4º ESO,Dibujo Técnico (4º ESO),https://drive.google.com/file/d/1sZzsrvyFO3ZJbONcqxOqwRlzeTGJGJ45/view?usp=drivesdk
+4º ESO,Digitalización (4º ESO),https://drive.google.com/file/d/1qtUDvQpEe1lSOBsLIG1Cjo5GpR3EmNiY/view?usp=drivesdk
+4º ESO,Economía y Emprendimiento (4º ESO),https://drive.google.com/file/d/110eCqjDm7bE4JoYdlp8pnXqEa9D-NAkM/view?usp=drivesdk
+4º ESO,Educación Física (4º ESO),https://drive.google.com/file/d/1HEoRI2gG4XgEh8wTZT-x11TpBd96VB2j/view?usp=drivesdk
+4º ESO,Expresión Artística (4º ESO),https://drive.google.com/file/d/1_CYOBcIucSRM2cPIEgXyrDsvQ5mv8m5b/view?usp=drivesdk
+4º ESO,Filosofía (4º ESO),https://drive.google.com/file/d/1ENG5JnB5FphYYrX9oKMBDrdjJ6ZmiNyU/view?usp=drivesdk
+4º ESO,Física y Química (4º ESO),https://drive.google.com/file/d/14sUy-nF7wd-YIqUkN4DSaXoml5d57V9E/view?usp=drivesdk
+4º ESO,Formación y Orientación Personal y Profesional (4º ESO),https://drive.google.com/file/d/1gIOY5fONCNupjITvallqdpkgX7dIE-Ax/view?usp=drivesdk
+4º ESO,Geografía e Historia (4º ESO),https://drive.google.com/file/d/1ocX9jNThVWLI2r-pcAko71pyYb6PMT4B/view?usp=drivesdk
+4º ESO,Latín (4º ESO),https://drive.google.com/file/d/1KuJflUvypDj1tz4jgu0zRKkUQ-AxzqJk/view?usp=drivesdk
+4º ESO,Lengua Castellana y Literatura (4º ESO),https://drive.google.com/file/d/1sb0QJUGMXHq9GQwLwtVsNNxV936SnR-X/view?usp=drivesdk
+4º ESO,Lengua Extranjera (4º ESO),https://drive.google.com/file/d/1oZ_vjBtuPD8uI5zMOXMiE_VGaEf-qEDf/view?usp=drivesdk
+4º ESO,Matemáticas A (4º ESO),https://drive.google.com/file/d/1eqCBGMhnhLavZVnxvWN17kaOVm0aJ96i/view?usp=drivesdk
+4º ESO,Matemáticas B (4º ESO),https://drive.google.com/file/d/1Rg0UlBfxXLWrMC_AqSwa8e4pCZsCpHGj/view?usp=drivesdk
+4º ESO,Música (4º ESO),https://drive.google.com/file/d/1fnFiEB_wgEuRzK8M9xHyqPbNADJlrXdM/view?usp=drivesdk
+4º ESO,Tecnología (4º ESO),https://drive.google.com/file/d/1tY1-JJSea638Llqr1Qb1kgA31U6aQK63/view?usp=drivesdk
+1º BACHILLERATO,Análisis Musical (1º BACH),https://drive.google.com/file/d/1HAKAWdBEkOSiJUw9ygSFvH7GX_0zYL3R/view?usp=drivesdk
+1º BACHILLERATO,Anatomía Aplicada (1º BACH),https://drive.google.com/file/d/1-cyiU8-9jP2mZmfkvBYI0nv4rM1ysgAX/view?usp=drivesdk
+1º BACHILLERATO,Antropología y Sociología (1º BACH),https://drive.google.com/file/d/1saoNr-UJryqIk7IdFlXYHYIxL2TvIW5r/view?usp=drivesdk
+1º BACHILLERATO,Artes Escénicas (1º BACH),https://drive.google.com/file/d/1LHbZzuGwz0UNKxJ_8bokYJBigshS82tj/view?usp=drivesdk
+1º BACHILLERATO,Biología, Geología y Ciencias Ambientales (1º BACH),https://drive.google.com/file/d/1YlFSiszm6451FnMwWK5IR2Z2FjWRgDX3/view?usp=drivesdk
+1º BACHILLERATO,Coro y Técnica Vocal (1º BACH),https://drive.google.com/file/d/1iIM29Son4QwZN7b0c3zJ9GQE_FRiHWBL/view?usp=drivesdk
+1º BACHILLERATO,Creación Digital y Pensamiento Computacional (1º BACH),https://drive.google.com/file/d/1m52euseYcRxbNRVAgQVBd-XIlr9aHFot/view?usp=drivesdk
+1º BACHILLERATO,Cultura Audiovisual (1º BACH),https://drive.google.com/file/d/1xWyrLlcbqK7UQ0O-rNLDdv34OtO6NqV9/view?usp=drivesdk
+1º BACHILLERATO,Cultura Emprendedora y Empresarial (1º BACH),https://drive.google.com/file/d/14V920sJyt7SkTMKzaNWgYvJxVA_3f5YM/view?usp=drivesdk
+1º BACHILLERATO,Dibujo Artístico (1º BACH),https://drive.google.com/file/d/1m9CGKMa9yX4GkeF8OtU2XJRi1A5hcusj/view?usp=drivesdk
+1º BACHILLERATO,Dibujo Técnico (1º BACH),https://drive.google.com/file/d/1GzlJzOjeQEy_z7JmRE8rTM5MNWJkC1Xj/view?usp=drivesdk
+1º BACHILLERATO,Dibujo Técnico Aplicado a las Artes Plásticas y al Diseño (1º BACH),https://drive.google.com/file/d/1wE5fLS17ABJIioDuLpW4nz243m2b3eZD/view?usp=drivesdk
+1º BACHILLERATO,Economía (1º BACH),https://drive.google.com/file/d/1vs6WznOE0OUN2LWqLLybjX4RcXlJWV7q/view?usp=drivesdk
+1º BACHILLERATO,Economía, Emprendimiento y Actividad Empresarial (1º BACH),https://drive.google.com/file/d/1HtYAsZ6Jn7k8uem2zicDIy2DxBNJGMoj/view?usp=drivesdk
+1º BACHILLERATO,Educación Física (1º BACH),https://drive.google.com/file/d/1RRQaysWd-iNkKZBgsFP_1wBFNEMoVAgA/view?usp=drivesdk
+1º BACHILLERATO,Educación para la Convivencia Democrática (1º BACH),https://drive.google.com/file/d/1v4stWVrKWXYu0scZJLur_Wqt8O6TM7PE/view?usp=drivesdk
+1º BACHILLERATO,Filosofía (1º BACH),https://drive.google.com/file/d/125G1bI-67G-D7XDCl36rRbrR3FVqfBcQ/view?usp=drivesdk
+1º BACHILLERATO,Física y Química (1º BACH),https://drive.google.com/file/d/1E8Yer9zkw5iCHxhgwLnENtzgUt32EizA/view?usp=drivesdk
+1º BACHILLERATO,Griego (1º BACH),https://drive.google.com/file/d/1LKpHV2IJqZUm3iBO0V7CmEzfrGZZucBS/view?usp=drivesdk
+1º BACHILLERATO,Historia del Mundo Contemporáneo (1º BACH),https://drive.google.com/file/d/1CheEe2UG0YijZCywWnnVWWbXVvI_MUoN/view?usp=drivesdk
+1º BACHILLERATO,Latín (1º BACH),https://drive.google.com/file/d/1zNTiyltBlvHtfNzU-S_8-AyPR0lc74eD/view?usp=drivesdk
+1º BACHILLERATO,Lengua Castellana y Literatura (1º BACH),https://drive.google.com/file/d/14f42HH3J2hRbyfkJO4_Rmkc1RWO5xxrR/view?usp=drivesdk
+1º BACHILLERATO,Lengua Extranjera (1º BACH),https://drive.google.com/file/d/1EJPr4gJxLhs7MoTJTw4cCf8aERsWlkrp/view?usp=drivesdk
+1º BACHILLERATO,Lenguaje y Práctica Musical (1º BACH),https://drive.google.com/file/d/1sckg5RZc8t7RFHQ4a6x7c2ALuNMtlPjv/view?usp=drivesdk
+1º BACHILLERATO,Literatura Universal (1º BACH),https://drive.google.com/file/d/1K8T1tHFBAT-z1ZnwJSq_bcwOWIn90-Bo/view?usp=drivesdk
+1º BACHILLERATO,Matemáticas (1º BACH),https://drive.google.com/file/d/1SrwGutBhQA5tuPLBxGIqKS1zWwVYAzzK/view?usp=drivesdk
+1º BACHILLERATO,Matemáticas Aplicadas a las Ciencias Sociales (1º BACH),https://drive.google.com/file/d/1C5c0e9au0gsqsSwUtXM-YdM8JYuu-m9h/view?usp=drivesdk
+1º BACHILLERATO,Matemáticas Generales (1º BACH),https://drive.google.com/file/d/1fU73P-WW4CQlTqCc-2YdbX_ChXRTU3QB/view?usp=drivesdk
+1º BACHILLERATO,Patrimonio Cultural y Artístico de Andalucía (1º BACH),https://drive.google.com/file/d/1z1kAK8ktfoTYnJINSIsE_MxzdpHRBWTF/view?usp=drivesdk
+1º BACHILLERATO,Proyectos Artísticos (1º BACH),https://drive.google.com/file/d/1EYw_-yBz4lqkt-jVWe2Hzl1yHQ3Y0yVF/view?usp=drivesdk
+1º BACHILLERATO,Tecnología e Ingeniería (1º BACH),https://drive.google.com/file/d/1Z4vFmU2vq2nKU7n0q5OOKjm4R0KCuVhB/view?usp=drivesdk
+1º BACHILLERATO,Tecnologías de la Información y Comunicación (1º BACH),https://drive.google.com/file/d/1feh3rEGuThEMFCAuqMRYSjeDtzrDv6sD/view?usp=drivesdk
+1º BACHILLERATO,Volumen (1º BACH),https://drive.google.com/file/d/11WPqGcZE2BRAyP8lcwHFpCmN3hMwqK3V/view?usp=drivesdk
+2º BACHILLERATO,Actividad Física, Salud y Sociedad (2º BACH),https://drive.google.com/file/d/16tkFVkz64voDI5j4cdF1SjnwXB5rnN0_/view?usp=drivesdk
+2º BACHILLERATO,Análisis Musical (2º BACH),https://drive.google.com/file/d/1vLXi9WJZ0oh67U8dBU1OhM0GpUJy7G2X/view?usp=drivesdk
+2º BACHILLERATO,Artes Escénicas (2º BACH),https://drive.google.com/file/d/1p9tznylNLYYxCj7pC6DCrsGgUQtDZBmH/view?usp=drivesdk
+2º BACHILLERATO,Biología (2º BACH),https://drive.google.com/file/d/10B1sre11E7gkBC9wzzxwTzc05EQYoJKs/view?usp=drivesdk
+2º BACHILLERATO,Ciencias de la Tierra y del Medio Ambiente (2º BACH),https://drive.google.com/file/d/1HUvylbZ0OFWzW-Cgx0eKH4bPQAf2JJeN/view?usp=drivesdk
+2º BACHILLERATO,Ciencias Generales (2º BACH),https://drive.google.com/file/d/1B8hzQacMb7qmTExuYOBbACUu_FztpC3I/view?usp=drivesdk
+2º BACHILLERATO,Coro y Técnica Vocal (2º BACH),https://drive.google.com/file/d/1-_JWNz8cNOA9PC6ZyY4TiVv_TKlXWCUB/view?usp=drivesdk
+2º BACHILLERATO,Dibujo Artístico (2º BACH),https://drive.google.com/file/d/165bWfOqGXRrAbcUrXxfDhHDuchJ5GNYy/view?usp=drivesdk
+2º BACHILLERATO,Dibujo Técnico (2º BACH),https://drive.google.com/file/d/1el3JSyzG3nNJBZX3onNmseMAeMulPGKd/view?usp=drivesdk
+2º BACHILLERATO,Dibujo Técnico Aplicado a las Artes Plásticas y al Diseño (2º BACH),https://drive.google.com/file/d/1E0XYEHR1muOf0DPjWn0oavMcSS7wgEp6/view?usp=drivesdk
+2º BACHILLERATO,Diseño (2º BACH),https://drive.google.com/file/d/1KmWHE1x-XlsxWTjlgo2ibAlVbMQ8u2Ar/view?usp=drivesdk
+2º BACHILLERATO,Educación para la Convivencia Democrática (2º BACH),https://drive.google.com/file/d/1Tu6h0I6ONyumwtO_Jh_r4Pvgns2m6Hhx/view?usp=drivesdk
+2º BACHILLERATO,Electrotecnia (2º BACH),https://drive.google.com/file/d/1fGFAQLQYZt3wbxGCwORztGArQwG6VMWb/view?usp=drivesdk
+2º BACHILLERATO,Empresa y Diseño de Modelos de Negocio (2º BACH),https://drive.google.com/file/d/1Ppj9CCHcEK4tTS3ZTXjeD9wG0x35Gy-J/view?usp=drivesdk
+2º BACHILLERATO,Finanzas y Economía (2º BACH),https://drive.google.com/file/d/109nFEcXNDjOvII9ymG8ko9n8_UEVmEKM/view?usp=drivesdk
+2º BACHILLERATO,Física (2º BACH),https://drive.google.com/file/d/1xW1GaA7XDwY2XhbeUn3Cv4w1K2d-n6T4/view?usp=drivesdk
+2º BACHILLERATO,Fundamentos Artísticos (2º BACH),https://drive.google.com/file/d/12rnvXKiR9QsWfuOSl0pjOyqrQ22I5psG/view?usp=drivesdk
+2º BACHILLERATO,Fundamentos de Administración y Gestión (2º BACH),https://drive.google.com/file/d/1iPKQTMNo3tgF1yCCPjimierqgrwHitHf/view?usp=drivesdk
+2º BACHILLERATO,Geografía (2º BACH),https://drive.google.com/file/d/1fnCjrUcojsqMWxm19aAKvj59_Hu17JtW/view?usp=drivesdk
+2º BACHILLERATO,Geología y Ciencias Ambientales (2º BACH),https://drive.google.com/file/d/17srOk-GuoqfaKgO4xcb3ILJlI2IoMXTj/view?usp=drivesdk
+2º BACHILLERATO,Griego (2º BACH),https://drive.google.com/file/d/1RE0_UQhSlFffVqVCf7DZDBVxG2h7jGoa/view?usp=drivesdk
+2º BACHILLERATO,Historia de España (2º BACH),https://drive.google.com/file/d/156Lrg5mOlWmqqia3dhJkW7Jw-kiLh8T3/view?usp=drivesdk
+2º BACHILLERATO,Historia de la Filosofía (2º BACH),https://drive.google.com/file/d/1LTkQ9ZCSzjOF0aYhdoVs0WLclI_iCxqH/view?usp=drivesdk
+2º BACHILLERATO,Historia de la Música y de la Danza (2º BACH),https://drive.google.com/file/d/14GGGMNlL2Q0gkV_l7XPfadbW_h8_XIfz/view?usp=drivesdk
+2º BACHILLERATO,Historia del Arte (2º BACH),https://drive.google.com/file/d/1xTjbLpfDcOhhsrEKiit7NiCPoUsZCLtd/view?usp=drivesdk
+2º BACHILLERATO,Imagen y Sonido (2º BACH),https://drive.google.com/file/d/1PBFGZcyBMaCf3TLMToplCjCgx6xLlICD/view?usp=drivesdk
+2º BACHILLERATO,Latín (2º BACH),https://drive.google.com/file/d/1_W4PxJzI6ymy93_ED6JWvR7UZE1xVaoc/view?usp=drivesdk
+2º BACHILLERATO,Lengua Castellana y Literatura (2º BACH),https://drive.google.com/file/d/1m7xtxC-uKNj1KdPArrE6QiOP7dIhIwsw/view?usp=drivesdk
+2º BACHILLERATO,Lengua Extranjera (2º BACH),https://drive.google.com/file/d/1cBBcd87ZkjhFyc9rr-5DYo5eh5nyqGJn/view?usp=drivesdk
+2º BACHILLERATO,Literatura Dramática (2º BACH),https://drive.google.com/file/d/1Ph2hOrWwhYjGdQbT_IgCRz9hfxI6Xjl0/view?usp=drivesdk
+2º BACHILLERATO,Matemáticas (2º BACH),https://drive.google.com/file/d/1uT7o-8xdE50tp99qmA_jsEuzWHiSyHri/view?usp=drivesdk
+2º BACHILLERATO,Matemáticas Aplicadas a las Ciencias Sociales (2º BACH),https://drive.google.com/file/d/1h5_9vLf1n89RbL5CE2RSB0APYAj9xrOQ/view?usp=drivesdk
+2º BACHILLERATO,Mitología Clásica (2º BACH),https://drive.google.com/file/d/1ugjsZI5jB91RXO1qdj73qoB7HKmrTOqg/view?usp=drivesdk
+2º BACHILLERATO,Movimientos Culturales y Artísticos (2º BACH),https://drive.google.com/file/d/1V2Ec8uHMzn-Tf6LxQNmsXkSGun5flvqp/view?usp=drivesdk
+2º BACHILLERATO,Programación y Computación (2º BACH),https://drive.google.com/file/d/1I-0DGfqUiARrj17CF6PlTPddHkBArPYi/view?usp=drivesdk
+2º BACHILLERATO,Psicología (2º BACH),https://drive.google.com/file/d/1Dh6_vpo4AUAeZVJbG3dPyqcnIv1EyL_j/view?usp=drivesdk
+2º BACHILLERATO,Química (2º BACH),https://drive.google.com/file/d/1XNJIyZSrOzxarHEZXxROcQfyst6OWNm3/view?usp=drivesdk
+2º BACHILLERATO,Técnicas de Expresión Gráfico-Plástica (2º BACH),https://drive.google.com/file/d/1U8I5Kz_lsR_g1F9MiU1-KSJiak7Uwjq_/view?usp=drivesdk
+2º BACHILLERATO,Tecnología e Ingeniería (2º BACH),https://drive.google.com/file/d/1TcxQ6ahgksDJo0lDEIc6Bf4BrAnD7t0B/view?usp=drivesdk
+2º BACHILLERATO,Tecnologías de la Información y Comunicación (2º BACH),https://drive.google.com/file/d/1RjO9oNWiFOA-XlD-oe6MgpwaZEVAXpZc/view?usp=drivesdk
+1º DIVERSIFICACIÓN,Ámbito Científico-Tecnológico (1º DIVER),https://drive.google.com/file/d/17BP0fXEddgy-AUxaXCvmycUNDe1dCvKa/view?usp=drivesdk
+1º DIVERSIFICACIÓN,Ámbito Lingüístico y Social (1º DIVER),https://drive.google.com/file/d/1Tgxsp4NlzuU8MrGHXJ5NQjtfpk26c-nb/view?usp=drivesdk
+2º DIVERSIFICACIÓN,Ámbito Científico-Tecnológico (2º DIVER),https://drive.google.com/file/d/1CjeAAl2qqKfB8S_gsjRSj7zH7WKjqdni/view?usp=drivesdk
+2º DIVERSIFICACIÓN,Ámbito Lingüístico y Social (2º DIVER),https://drive.google.com/file/d/1a_OpKVYh1y0FVFZbs4pjcJUySe4hcJfv/view?usp=drivesdk`;
+
+        let state = {
+            curriculumData: [],
+            uploadedFiles: [],
+            database: {}
+        };
+
+        // --- INICIALIZACIÓN ---
+        window.onload = () => {
+            const savedOR = localStorage.getItem('or_api_key');
+            if (savedOR) {
+                document.getElementById('apiKeyInput').value = savedOR;
+                onApiKeyInput();
+                fetchModels();
+            }
+            const savedGoogle = localStorage.getItem('google_api_key');
+            if (savedGoogle) {
+                document.getElementById('googleKeyInput').value = savedGoogle;
+                onGoogleKeyInput();
+            }
+            const savedFree = localStorage.getItem('free_api_key');
+            if (savedFree) {
+                document.getElementById('freeKeyInput').value = savedFree;
+                onFreeKeyInput();
+            }
+            initDatabase();
+        };
+
+        function initDatabase() {
+            const lines = csvRawData.split('\n');
+            for(let i = 1; i < lines.length; i++) {
+                const parts = lines[i].split(',');
+                if(parts.length < 3) continue;
+                const curso = parts[0].trim();
+                const materia = parts[1].trim();
+                const fileId = parts[2].match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+                if (!state.database[curso]) state.database[curso] = [];
+                state.database[curso].push({ name: materia, id: fileId });
+            }
+            const courseSelect = document.getElementById('courseSelect');
+            Object.keys(state.database).sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                courseSelect.appendChild(opt);
+            });
+        }
+
+        document.getElementById('courseSelect').onchange = (e) => {
+            const sub = document.getElementById('subjectSelect');
+            sub.innerHTML = '<option value="">Elegir materia...</option>';
+            sub.disabled = !e.target.value;
+            if(!e.target.value) return;
+            state.database[e.target.value].forEach((m, i) => {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = m.name;
+                sub.appendChild(opt);
+            });
+            sub.style.opacity = '1';
+            sub.disabled = false;
+        };
+
+        // --- CARGA DE JSON CON PROXIES ---
+        document.getElementById('subjectSelect').onchange = async (e) => {
+            const curso = document.getElementById('courseSelect').value;
+            const item = state.database[curso][e.target.value];
+            const status = document.getElementById('json-status');
+            status.innerHTML = `<span class="loader" style="margin-right:7px;"></span> <span style="color:var(--text-dim);">Conectando con base de datos normativa...</span>`;
+            
+            const driveUrl = `https://drive.google.com/uc?export=download&id=${item.id}`;
+            let loadedData = null;
+
+            // Intento 1: CodeTabs
+            try {
+                const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(driveUrl)}`);
+                if (res.ok) loadedData = await res.json();
+            } catch(e) {}
+
+            // Intento 2: CorsProxy
+            if (!loadedData) {
+                try {
+                    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(driveUrl)}`);
+                    if (res.ok) loadedData = await res.json();
+                } catch(e) {}
+            }
+
+            // Intento 3: AllOrigins
+            if (!loadedData) {
+                try {
+                    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(driveUrl)}`);
+                    if (res.ok) loadedData = await res.json();
+                } catch(e) {}
+            }
+
+            if (loadedData) {
+                state.curriculumData = loadedData.relacion_saberes_criterios || loadedData;
+                status.innerHTML = `<span style="color:#4ade80;font-weight:700;"><i class="fas fa-check mr-1"></i> ${item.name} cargada correctamente.</span>`;
+                document.getElementById('inputSection').classList.remove('disabled-section');
+            } else {
+                status.innerHTML = `<span style="color:#f87171;font-weight:700;"><i class="fas fa-exclamation-circle mr-1"></i>Error de carga. Reintenta o sube JSON manual.</span>`;
+            }
+        };
+
+        // --- GESTIÓN ARCHIVOS ---
+        document.getElementById('fileInput').onchange = (e) => {
+            Array.from(e.target.files).forEach(f => state.uploadedFiles.push(f));
+            renderFiles();
+        };
+
+        function renderFiles() {
+            const status = document.getElementById('filesStatus');
+            const model = document.getElementById('modelSelect').value;
+            status.innerHTML = state.uploadedFiles.map((f, i) => {
+                const isPDF = f.type === 'application/pdf';
+                const isImage = f.type.startsWith('image/');
+                let modeTag = '';
+                if (isPDF) {
+                    const hasVision = modelSupportsVision(model);
+                    modeTag = hasVision
+                        ? `<span class="ml-1 text-[9px] bg-green-100 text-green-700 px-1 rounded">📄+👁 auto</span>`
+                        : `<span class="ml-1 text-[9px] bg-yellow-100 text-yellow-700 px-1 rounded">📄 texto</span>`;
+                } else if (isImage) {
+                    modeTag = `<span class="ml-1 text-[9px] bg-purple-100 text-purple-700 px-1 rounded">🖼 imagen</span>`;
+                }
+                return `
+                    <div class="file-chip">
+                        <i class="fas fa-file${isPDF ? '-pdf' : isImage ? '-image' : ''}" style="color:${isPDF?'#f87171':isImage?'#c084fc':'#94a3b8'};"></i>
+                        <span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${f.name}">${f.name}</span>
+                        ${modeTag}
+                        <button onclick="state.uploadedFiles.splice(${i},1);renderFiles()" style="background:none;border:none;cursor:pointer;color:#f87171;opacity:0.7;margin-left:2px;"><i class="fas fa-times"></i></button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Convierte un archivo a base64 data URI completo
+        async function fileToDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Detecta si el modelo seleccionado soporta visión/imágenes
+        function modelSupportsVision(modelId) {
+            const visionKeywords = ['vision', 'gpt-4o', 'claude', 'gemini', 'pixtral', 'llava', 'mistral-large', 'qwen.*vl', 'internvl', 'cogvlm'];
+            return visionKeywords.some(k => new RegExp(k, 'i').test(modelId));
+        }
+
+        // Carga PDF.js una sola vez
+        async function loadPDFJS() {
+            if (window.pdfjsLib) return;
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // Extrae texto de un PDF con PDF.js
+        async function extractTextFromPDF(file) {
+            await loadPDFJS();
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ').replace(/\s+/g, ' ').trim();
+                if (pageText) fullText += `\n--- Página ${i} ---\n${pageText}`;
+            }
+            return fullText.trim();
+        }
+
+        // Renderiza páginas de un PDF como imágenes base64 (para PDFs escaneados con modelos visión)
+        async function renderPDFAsImages(file, maxPages = 6, scale = 1.5) {
+            await loadPDFJS();
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const pages = Math.min(pdf.numPages, maxPages);
+            const images = [];
+            for (let i = 1; i <= pages; i++) {
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                const ctx = canvas.getContext('2d');
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                images.push(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+            }
+            return { images, totalPages: pdf.numPages };
+        }
+
+        // Construye el array de contenido para OpenRouter (formato OpenAI estándar)
+        async function buildUserContent(text, files, modelId, onProgress) {
+            const content = [];
+
+            if (text && text.trim()) {
+                content.push({ type: "text", text: `Contenido del examen:\n${text}` });
+            }
+
+            const hasVision = modelSupportsVision(modelId);
+
+            for (const file of files) {
+                const isImage = file.type.startsWith('image/');
+                const isPDF = file.type === 'application/pdf';
+
+                if (isImage) {
+                    // Imágenes normales: image_url estándar
+                    const dataURL = await fileToDataURL(file);
+                    content.push({
+                        type: "image_url",
+                        image_url: { url: dataURL, detail: "high" }
+                    });
+                    content.push({ type: "text", text: `[Imagen adjunta: ${file.name}]` });
+
+                } else if (isPDF) {
+                    onProgress && onProgress(`Procesando PDF: ${file.name}...`);
+
+                    // PASO 1: Intentar extraer texto siempre
+                    let extractedText = '';
+                    try {
+                        extractedText = await extractTextFromPDF(file);
+                    } catch(e) {
+                        console.warn('Error extrayendo texto del PDF:', e);
+                    }
+
+                    const hasText = extractedText && extractedText.length > 50;
+
+                    if (hasText) {
+                        // PDF con texto: enviarlo como texto (funciona con CUALQUIER modelo)
+                        content.push({ type: "text", text: `=== PDF: "${file.name}" ===\n${extractedText}\n=== FIN DEL PDF ===` });
+
+                        // Si además el modelo tiene visión, añadir las páginas como imágenes para más contexto
+                        if (hasVision) {
+                            try {
+                                onProgress && onProgress(`Renderizando páginas del PDF como imágenes...`);
+                                const { images, totalPages } = await renderPDFAsImages(file, 6, 1.5);
+                                content.push({ type: "text", text: `[Páginas renderizadas del PDF (${Math.min(6, totalPages)} de ${totalPages}):` });
+                                for (let i = 0; i < images.length; i++) {
+                                    content.push({
+                                        type: "image_url",
+                                        image_url: { url: `data:image/jpeg;base64,${images[i]}`, detail: "high" }
+                                    });
+                                }
+                                if (totalPages > 6) {
+                                    content.push({ type: "text", text: `Nota: Solo se muestran las primeras 6 páginas de ${totalPages} como imagen. El texto completo ya fue incluido arriba.]` });
+                                } else {
+                                    content.push({ type: "text", text: `]` });
+                                }
+                            } catch(e) {
+                                console.warn('No se pudieron renderizar páginas como imágenes:', e);
+                                // El texto ya está incluido, así que no pasa nada
+                            }
+                        }
+                    } else {
+                        // PDF escaneado (sin texto): renderizar como imágenes si hay visión
+                        if (hasVision) {
+                            onProgress && onProgress(`PDF escaneado detectado, renderizando páginas como imágenes...`);
+                            try {
+                                const { images, totalPages } = await renderPDFAsImages(file, 8, 2.0);
+                                content.push({ type: "text", text: `=== PDF ESCANEADO: "${file.name}" (${totalPages} páginas, mostrando ${images.length}) ===` });
+                                for (let i = 0; i < images.length; i++) {
+                                    content.push({ type: "text", text: `[Página ${i + 1}]` });
+                                    content.push({
+                                        type: "image_url",
+                                        image_url: { url: `data:image/jpeg;base64,${images[i]}`, detail: "high" }
+                                    });
+                                }
+                                if (totalPages > 8) {
+                                    content.push({ type: "text", text: `[Nota: Se han incluido las primeras 8 páginas. El PDF tiene ${totalPages} páginas en total.]` });
+                                }
+                            } catch(e) {
+                                content.push({ type: "text", text: `[Error al procesar el PDF escaneado "${file.name}": ${e.message}]` });
+                            }
+                        } else {
+                            content.push({ type: "text", text: `[PDF "${file.name}" no tiene texto extraíble (probablemente escaneado). Para analizarlo, selecciona un modelo con visión como Gemini, Claude o GPT-4o.]` });
+                        }
+                    }
+                }
+            }
+
+            if (content.length === 0) {
+                content.push({ type: "text", text: "No se ha proporcionado contenido de examen." });
+            }
+
+            return content;
+        }
+
+        // --- PROVEEDOR ACTIVO ---
+        let activeProvider = 'openrouter'; // 'openrouter' | 'google' | 'free'
+
+        function switchProvider(p) {
+            activeProvider = p;
+            // Tabs
+            document.getElementById('tabOR').className     = 'tab-btn ' + (p==='openrouter' ? 'active-or'     : 'inactive');
+            document.getElementById('tabGoogle').className = 'tab-btn ' + (p==='google'     ? 'active-google' : 'inactive');
+            document.getElementById('tabFree').className   = 'tab-btn ' + (p==='free'       ? 'active-free'   : 'inactive');
+            // Panels
+            document.getElementById('panelOR').style.display     = p==='openrouter' ? 'flex' : 'none';
+            document.getElementById('panelGoogle').style.display = p==='google'     ? 'flex' : 'none';
+            document.getElementById('panelFree').style.display   = p==='free'       ? 'flex' : 'none';
+            // Status
+            const msgs = { openrouter: 'Esperando API Key OpenRouter...', google: 'Esperando API Key Google AI...', free: 'Introduce clave gratuita de AI Studio...' };
+            setApiStatus('idle', msgs[p]);
+        }
+
+        // --- STATUS INDICATOR ---
+        function setApiStatus(state, msg) {
+            const dot = document.getElementById('api-status-icon');
+            const txt = document.getElementById('api-status');
+            dot.className = 'status-dot status-' + state;
+            txt.textContent = msg;
+            txt.style.color = state==='error' ? '#f87171' : state==='ok' ? '#4ade80' : 'var(--text-muted)';
+        }
+
+        // --- TOGGLE KEY VISIBILITY (shared) ---
+        function toggleKeyVisibility(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon  = document.getElementById(iconId);
+            if (input.type === 'password') { input.type = 'text';     icon.className = 'fas fa-eye-slash'; }
+            else                           { input.type = 'password'; icon.className = 'fas fa-eye'; }
+        }
+
+        // ══════════════════════════════════
+        //  OPENROUTER
+        // ══════════════════════════════════
+        function onApiKeyInput() {
+            const key   = document.getElementById('apiKeyInput').value.trim();
+            const strip = document.getElementById('keyInfoStrip');
+            if (key && !key.startsWith('sk-or-')) {
+                strip.classList.remove('hidden');
+                setApiStatus('error', 'La key no parece de OpenRouter (debe empezar por sk-or-)');
+            } else {
+                strip.classList.add('hidden');
+                if (!key) setApiStatus('idle', 'Esperando API Key OpenRouter...');
+                else       setApiStatus('idle', 'Pulsa Conectar para verificar');
+            }
+        }
+
+        async function fetchModels() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (!key) { setApiStatus('idle', 'Introduce tu API Key de OpenRouter'); return; }
+            setApiStatus('checking', 'Verificando API Key...');
+            document.getElementById('connectBtn').disabled = true;
+            try {
+                const res  = await fetch("https://openrouter.ai/api/v1/models", { headers: { "Authorization": `Bearer ${key}` } });
+                const json = await res.json();
+                if (!res.ok) {
+                    setApiStatus('error', json?.error?.message || `Error ${res.status}`);
+                    if (res.status === 401) document.getElementById('keyInfoStrip').classList.remove('hidden');
+                    return;
+                }
+                const models = (json.data || []).sort((a,b) => b.id.localeCompare(a.id));
+                const sel = document.getElementById('modelSelect');
+                sel.innerHTML = models.map(m => `<option value="${m.id}">${m.name || m.id}</option>`).join('');
+                setApiStatus('ok', `✓ OpenRouter · ${models.length} modelos`);
+                document.getElementById('keyInfoStrip').classList.add('hidden');
+                sel.addEventListener('change', renderFiles, { once: false });
+                renderFiles();
+            } catch(e) {
+                setApiStatus('error', `Sin conexión: ${e.message}`);
+            } finally {
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        function updateConfig() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (!key) { setApiStatus('error', 'Introduce una API Key antes de conectar'); return; }
+            localStorage.setItem('or_api_key', key);
+            fetchModels();
+        }
+
+        // ══════════════════════════════════
+        //  GOOGLE AI (Gemini)
+        // ══════════════════════════════════
+
+        // Modelos Gemini conocidos como fallback si la API no los lista bien
+        const GOOGLE_FALLBACK_MODELS = [
+            { id: 'gemini-2.0-flash',         name: 'Gemini 2.0 Flash' },
+            { id: 'gemini-2.0-flash-lite',     name: 'Gemini 2.0 Flash Lite' },
+            { id: 'gemini-1.5-pro',            name: 'Gemini 1.5 Pro' },
+            { id: 'gemini-1.5-flash',          name: 'Gemini 1.5 Flash' },
+            { id: 'gemini-1.5-flash-8b',       name: 'Gemini 1.5 Flash 8B' },
+        ];
+
+        function onGoogleKeyInput() {
+            const key   = document.getElementById('googleKeyInput').value.trim();
+            const strip = document.getElementById('googleInfoStrip');
+            if (key && !key.startsWith('AIza')) {
+                strip.classList.remove('hidden');
+                setApiStatus('error', 'La key de Google AI debe empezar por "AIza"');
+            } else {
+                strip.classList.add('hidden');
+                if (!key) setApiStatus('idle', 'Esperando API Key Google AI...');
+                else       setApiStatus('idle', 'Pulsa Conectar para verificar');
+            }
+        }
+
+        async function connectGoogle() {
+            const key = document.getElementById('googleKeyInput').value.trim();
+            if (!key) { setApiStatus('error', 'Introduce tu API Key de Google AI'); return; }
+            if (!key.startsWith('AIza')) {
+                document.getElementById('googleInfoStrip').classList.remove('hidden');
+                setApiStatus('error', 'La key debe empezar por "AIza"');
+                return;
+            }
+            setApiStatus('checking', 'Verificando clave Google AI...');
+            document.getElementById('connectGoogleBtn').disabled = true;
+
+            try {
+                // Obtener lista de modelos de la API de Google
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
+                );
+                const json = await res.json();
+
+                if (!res.ok) {
+                    const errMsg = json?.error?.message || `Error ${res.status}`;
+                    setApiStatus('error', `Google AI: ${errMsg}`);
+                    document.getElementById('googleInfoStrip').classList.remove('hidden');
+                    return;
+                }
+
+                // Filtrar solo modelos generateContent (los que sirven para chat)
+                const allModels = json.models || [];
+                const chatModels = allModels.filter(m =>
+                    (m.supportedGenerationMethods || []).includes('generateContent') &&
+                    m.name.includes('gemini')
+                );
+
+                const modelsToShow = chatModels.length > 0 ? chatModels : GOOGLE_FALLBACK_MODELS.map(m => ({
+                    name: 'models/' + m.id, displayName: m.name, supportedGenerationMethods: ['generateContent']
+                }));
+
+                const sel = document.getElementById('googleModelSelect');
+                sel.innerHTML = modelsToShow.map(m => {
+                    // name es tipo "models/gemini-1.5-pro" → extraer el id
+                    const id   = m.name.replace('models/', '');
+                    const label = m.displayName || id;
+                    return `<option value="${id}">${label}</option>`;
+                }).join('');
+
+                localStorage.setItem('google_api_key', key);
+                setApiStatus('ok', `✓ Google AI · ${modelsToShow.length} modelos`);
+                document.getElementById('googleInfoStrip').classList.add('hidden');
+                sel.addEventListener('change', renderFiles, { once: false });
+                renderFiles();
+
+            } catch(e) {
+                setApiStatus('error', `Error: ${e.message}`);
+            } finally {
+                document.getElementById('connectGoogleBtn').disabled = false;
+            }
+        }
+
+        // ══════════════════════════════════
+        //  FREE PROVIDER (Gemini Flash gratis)
+        // ══════════════════════════════════
+        const FREE_MODEL = 'gemini-2.0-flash';
+
+        function onFreeKeyInput() {
+            const key = document.getElementById('freeKeyInput').value.trim();
+            const strip = document.getElementById('freeInfoStrip');
+            if (key && !key.startsWith('AIza')) {
+                strip.classList.remove('hidden');
+                setApiStatus('error', 'La clave debe empezar por "AIza" (Google AI Studio)');
+            } else {
+                strip.classList.add('hidden');
+                if (!key) setApiStatus('idle', 'Introduce clave gratuita de AI Studio...');
+                else       setApiStatus('idle', 'Pulsa "Activar gratis" para verificar');
+            }
+        }
+
+        async function connectFree() {
+            const key = document.getElementById('freeKeyInput').value.trim();
+            if (!key) { setApiStatus('error', 'Introduce tu API Key de Google AI Studio'); return; }
+            if (!key.startsWith('AIza')) {
+                document.getElementById('freeInfoStrip').classList.remove('hidden');
+                setApiStatus('error', 'La clave debe empezar por "AIza"');
+                return;
+            }
+            setApiStatus('checking', 'Verificando clave gratuita...');
+            document.getElementById('connectFreeBtn').disabled = true;
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${FREE_MODEL}?key=${encodeURIComponent(key)}`);
+                const json = await res.json();
+                if (!res.ok) {
+                    setApiStatus('error', `Error: ${json?.error?.message || res.status}`);
+                    document.getElementById('freeInfoStrip').classList.remove('hidden');
+                    return;
+                }
+                localStorage.setItem('free_api_key', key);
+                setApiStatus('ok', `✓ Gemini Flash GRATIS activado · sin coste`);
+                document.getElementById('freeInfoStrip').classList.add('hidden');
+            } catch(e) {
+                setApiStatus('error', `Error: ${e.message}`);
+            } finally {
+                document.getElementById('connectFreeBtn').disabled = false;
+            }
+        }
+        async function validateBeforeAnalysis() {
+            if (activeProvider === 'free') {
+                const key = document.getElementById('freeKeyInput').value.trim();
+                if (!key) return { ok: false, msg: 'Introduce tu API Key gratuita de Google AI Studio y pulsa "Activar gratis".', tip: 'Consíguela sin coste en aistudio.google.com/app/apikey' };
+                if (!key.startsWith('AIza')) return { ok: false, msg: 'La clave debe empezar por "AIza".', tip: 'Consíguela GRATIS en aistudio.google.com/app/apikey' };
+                return { ok: true };
+            }
+            if (activeProvider === 'google') {
+                const key   = document.getElementById('googleKeyInput').value.trim();
+                const model = document.getElementById('googleModelSelect').value;
+                if (!key)   return { ok: false, msg: 'Introduce tu API Key de Google AI y pulsa Conectar.' };
+                if (!key.startsWith('AIza')) return { ok: false, msg: 'La key de Google AI debe empezar por "AIza".', tip: 'Consíguela en aistudio.google.com/app/apikey' };
+                if (!model) return { ok: false, msg: 'No hay modelo seleccionado. Pulsa Conectar para cargar los modelos.' };
+                return { ok: true };
+            }
+
+            // OpenRouter
+            const key   = document.getElementById('apiKeyInput').value.trim();
+            const model = document.getElementById('modelSelect').value;
+            if (!key)   return { ok: false, msg: 'No hay API Key de OpenRouter. Introdúcela y pulsa Conectar.' };
+            if (!key.startsWith('sk-or-')) return { ok: false, msg: 'La API Key no es de OpenRouter (debe empezar por sk-or-).', tip: 'Claves de Gemini u OpenAI directas no funcionan aquí. OpenRouter las unifica con una sola clave.' };
+            if (!model) return { ok: false, msg: 'No hay modelo seleccionado. Pulsa Conectar para cargar los modelos.' };
+            try {
+                const res = await fetch("https://openrouter.ai/api/v1/auth/key", { headers: { "Authorization": `Bearer ${key}` } });
+                if (!res.ok) {
+                    const j = await res.json().catch(() => ({}));
+                    return { ok: false, msg: `API Key inválida (${res.status}): ${j?.error?.message || res.statusText}`, tip: 'Comprueba tu clave en openrouter.ai/keys' };
+                }
+                const info   = await res.json();
+                const credits = info?.data?.limit_remaining;
+                if (credits !== null && credits !== undefined && credits <= 0) {
+                    return { ok: false, msg: 'Sin créditos en OpenRouter.', tip: 'Recarga en openrouter.ai/credits' };
+                }
+            } catch(_) {}
+            return { ok: true };
+        }
+
+        // --- HELPER: Parsear JSON con tolerancia a bloques Markdown ---
+        function extractJSON(raw) {
+            if (!raw) return null;
+            // Eliminar bloques ```json ... ```
+            let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+            // Intentar parsear directamente
+            try { return JSON.parse(cleaned); } catch(_) {}
+            // Buscar primer { y último } como fallback
+            const start = cleaned.indexOf('{');
+            const end = cleaned.lastIndexOf('}');
+            if (start !== -1 && end !== -1 && end > start) {
+                try { return JSON.parse(cleaned.substring(start, end + 1)); } catch(_) {}
+            }
+            return null;
+        }
+
+        // --- HELPER: Mostrar error detallado ---
+        function showError(container, title, detail, tip) {
+            container.innerHTML = `
+                <div style="padding:20px;background:var(--surface);border:1px solid rgba(239,68,68,0.2);border-radius:14px;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                        <div style="background:rgba(239,68,68,0.12);color:#f87171;padding:8px;border-radius:8px;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <h3 style="font-weight:700;color:#f87171;font-size:1rem;">${title}</h3>
+                    </div>
+                    ${tip ? `<div class="error-tip"><i class="fas fa-lightbulb mr-1"></i>${tip}</div>` : ''}
+                    ${detail ? `<div class="error-detail">${detail}</div>` : ''}
+                </div>`;
+        }
+
+        // --- PROCESAMIENTO ANALÍTICO ---
+        document.getElementById('analizarBtn').onclick = async () => {
+            // Key and model resolved later per-provider inside makeRequest; just grab active values for buildUserContent
+            const model = activeProvider === 'free'
+                ? FREE_MODEL
+                : activeProvider === 'google'
+                ? document.getElementById('googleModelSelect').value
+                : document.getElementById('modelSelect').value;
+            const text = document.getElementById('ejerciciosInput').value;
+
+            if (!text && state.uploadedFiles.length === 0) { alert("Añade texto o adjunta un archivo para analizar."); return; }
+
+            const btn = document.getElementById('analizarBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="loader"></span> Verificando credenciales...`;
+
+            const container = document.getElementById('resultadosContainer');
+            document.getElementById('resultadosSection').classList.remove('hidden');
+            container.innerHTML = `
+                <div style="padding:32px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;">
+                    <div class="loader" style="width:32px;height:32px;margin:0 auto 14px;"></div>
+                    <p style="font-weight:700;color:var(--text);">Verificando credenciales...</p>
+                </div>`;
+
+            // --- Validación previa ---
+            const validation = await validateBeforeAnalysis();
+            if (!validation.ok) {
+                showError(container, 'No se puede iniciar el análisis', validation.msg, validation.tip || null);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-brain mr-2"></i> EJECUTAR ANÁLISIS CURRICULAR COMPLETO';
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="padding:40px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;">
+                    <div class="loader" style="width:36px;height:36px;margin:0 auto 16px;"></div>
+                    <p style="font-weight:700;color:var(--text);font-size:1rem;">Iniciando Embudo Lógico Curricular...</p>
+                    <p style="color:var(--text-muted);font-size:0.82rem;margin-top:6px;">Esto puede tardar unos segundos según el modelo seleccionado.</p>
+                </div>`;
+            btn.innerHTML = `<span class="loader"></span> Analizando...`;
+
+            // PROMPT MAESTRO COMPLETO
+            const systemPrompt = `ERES UN EXPERTO DOCENTE Y ANALISTA CURRICULAR.
+
+FUENTE DE VERDAD (NORMATIVA):
+${JSON.stringify(state.curriculumData)}
+
+TAREA PRINCIPAL:
+1. Analiza el documento COMPLETO. Identifica cada ejercicio individualmente.
+2. Para cada ejercicio, realiza el siguiente proceso de "EMBUDO" lógico.
+
+REGLAS DE EXHAUSTIVIDAD (CRÍTICO):
+- **TU RESPUESTA DEBE CUBRIR EL EXAMEN ENTERO**. Si hay 4 ejercicios con apartados a) y b), el array de salida debe tener 8 entradas (o las que correspondan).
+- NO resumas. NO agrupes si son diferentes. NO te detengas después del primero.
+- Genera una entrada en el array "analisis_ejercicios" por CADA pregunta identificada.
+- **RÚBRICA COMPLETA**: En el array "propuesta_rubrica", DEBES generar UNA FILA POR CADA APARTADO identificado en el paso 1. Si identificaste 5 apartados, la rúbrica DEBE tener 5 filas. NO las agrupes.
+- ESTRATEGIA PARA DOCUMENTOS LARGOS: Prioriza la estructura y la exhaustividad de la rúbrica sobre la longitud de las justificaciones de texto. Sé conciso en el "porqué" para asegurar que analices TODOS los apartados.
+
+PROCESO DE SELECCIÓN (EL EMBUDO):
+   a) **Paso 1: CONTENIDO**. ¿De qué trata el ejercicio?
+   b) **Paso 2: SABERES**. ¿Qué Saber Básico del JSON encaja con ese contenido?
+   c) **Paso 3: SELECCIÓN DE CRITERIOS**. De esa lista completa de criterios del saber, SELECCIONA SOLO aquellos que realmente se evalúan en la pregunta.
+   d) **Paso 4: DESCARTES MATEMÁTICOS**. [Criterios Descartados] = [TODOS los criterios del Saber en JSON] MENOS [Criterios Seleccionados].
+
+REGLAS CRÍTICAS DE INTEGRIDAD DE DATOS (NO INVENTAR):
+1. **FIDELIDAD ABSOLUTA AL JSON**:
+   - Solo puedes usar los Saberes y Criterios que aparecen LITERALMENTE en el JSON proporcionado arriba.
+   - **PROHIBIDO** inventar relaciones o definiciones. Copia literal.
+   - Si un Saber no tiene criterios asociados en el JSON, indica "Sin criterios asociados en normativa".
+
+2. **CONSISTENCIA INTELIGENTE**:
+   - Solo aplica los mismos criterios si los ejercicios son **ANÁLOGOS**.
+
+=====================================================================
+BLOQUE CRÍTICO: GENERACIÓN DE RÚBRICA ÚTIL PARA CORRECCIÓN (OBLIGATORIO)
+=====================================================================
+
+OBJETIVO DE LA RÚBRICA:
+- La rúbrica debe servir para corregir con rigor: puntúa **evidencias** de logro, no "relleno".
+- PROHIBIDO dar puntos por:
+  - "describir el enunciado", "copiar datos", "escribir fórmulas sin usarlas", "poner algo por poner".
+  - Frases vagas tipo "lo intenta" sin concretar qué evidencia hay.
+
+REGLA DE EVIDENCIAS:
+- Cada nivel (4-0) debe describir **qué se ve en el trabajo** del alumno:
+  - procedimiento correcto (planteamiento),
+  - cálculos/transformaciones,
+  - uso de representaciones (gráficas/tablas) si procede,
+  - justificación/argumentación si procede,
+  - resultado final e interpretación,
+  - notación/unidades/precisión cuando sea relevante.
+- Si un aspecto NO aplica al apartado (por ejemplo, "unidades" en un ejercicio sin magnitudes), puedes dejar ese matiz fuera o dejar algún nivel más breve.
+- Se permite que algún texto de nivel quede vacío ("") SOLO si de verdad no aplica, pero intenta completar todos.
+
+ESCALA FIJA 4→0 (SIN CAMBIARLA):
+- **Nivel 4 (perfecto)**: todo correcto y completo, con procedimiento adecuado y resultado correcto; si hay justificación requerida, está bien fundamentada.
+- **Nivel 3 (casi bien)**: procedimiento esencial correcto y mayor parte bien, pero con **fallo leve** (error aritmético menor, notación leve, pequeño descuido) que no invalida totalmente el enfoque.
+- **Nivel 2 (aprox. mitad bien)**: hay partes correctas relevantes, pero faltan pasos clave o hay errores que dejan el ejercicio **a medias**; el enfoque puede ser parcialmente válido.
+- **Nivel 1 (casi mal, algo salvable)**: hay alguna evidencia mínima útil (p.ej. un planteamiento inicial parcialmente correcto, una operación aislada correcta), pero el desarrollo es mayoritariamente erróneo o incoherente.
+- **Nivel 0**: en blanco o lo escrito no tiene sentido matemático/disciplinar respecto al apartado.
+
+COHERENCIA INTERNA:
+- Los niveles deben estar **ordenados**: 4 > 3 > 2 > 1 > 0 sin solaparse.
+- El texto de cada nivel debe ser específico del apartado (no genérico tipo "resuelve bien").
+
+CONSTRUCCIÓN POR "DIMENSIONES" (MUY RECOMENDADO):
+Para redactar cada fila de rúbrica, piensa en estas dimensiones y usa las que apliquen:
+1) Planteamiento/Modelo (ecuación, sistema, integral, representación, estrategia).
+2) Procedimiento/Desarrollo (pasos, transformaciones, algoritmo).
+3) Exactitud/Resultado (cálculo final, solución correcta).
+4) Justificación/Interpretación (explicación, conclusión, sentido del resultado).
+5) Presentación técnica (notación, unidades, precisión) SOLO si es relevante.
+No menciones todas siempre; usa solo las pertinentes al apartado.
+
+VINCULACIÓN A CRITERIOS:
+- El apartado_ref y criterios_relacionados deben corresponder a los "criterios_asignados" de ese apartado.
+- La rúbrica debe evaluar el desempeño del apartado en términos de esas evidencias, SIN inventar criterios nuevos.
+
+SALIDA OBLIGATORIA:
+- "propuesta_rubrica" debe existir y tener UNA FILA POR CADA APARTADO detectado.
+- Cada fila debe incluir nivel_4...nivel_0 (pueden ser "" si no aplica, pero evita vacíos innecesarios).
+
+=====================================================================
+FORMATO DE RESPUESTA JSON (ESTRICTO):
+{
+  "analisis_ejercicios": [
+    {
+      "titulo_ejercicio": "Ejercicio 1",
+      "apartados": [
+        {
+          "referencia": "Apartado a",
+          "justificacion_criterios": "...",
+          "criterios_asignados": [ { "codigo": "1.2", "definicion": "..." } ],
+          "criterios_descartados": [ { "codigo": "1.3", "definicion": "..." } ],
+          "saberes_identificados": [
+            {
+              "descripcion_saber": "...",
+              "criterios_del_saber": ["1.1", "1.2", "1.3", "1.4"]
+            }
+          ]
+        }
+      ],
+      "propuesta_rubrica": [
+        {
+          "apartado_ref": "Ejercicio 1 - Apartado a",
+          "criterios_relacionados": ["1.2"],
+          "nivel_4": "...",
+          "nivel_3": "...",
+          "nivel_2": "...",
+          "nivel_1": "...",
+          "nivel_0": "..."
+        }
+      ]
+    }
+  ]
+}`;
+
+            try {
+                // Construir contenido con manejo correcto de archivos para OpenRouter
+                const userContent = await buildUserContent(text, state.uploadedFiles, model, (msg) => {
+                    container.innerHTML = `
+                        <div style="padding:40px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;">
+                            <div class="loader" style="width:36px;height:36px;margin:0 auto 16px;"></div>
+                            <p style="font-weight:700;color:var(--text);font-size:1rem;">${msg}</p>
+                            <p style="color:var(--text-muted);font-size:0.82rem;margin-top:6px;">Esto puede tardar unos segundos...</p>
+                        </div>`;
+                });
+
+                // ══════════════════════════════════════════
+                //  LLAMADA A LA API (OpenRouter o Google AI)
+                // ══════════════════════════════════════════
+                let rawContent = null;
+
+                if (activeProvider === 'google' || activeProvider === 'free') {
+                    // ── Google AI (Gemini REST API) / Free Gemini Flash ──
+                    const gKey   = activeProvider === 'free'
+                        ? document.getElementById('freeKeyInput').value.trim()
+                        : document.getElementById('googleKeyInput').value.trim();
+                    const gModel = activeProvider === 'free'
+                        ? FREE_MODEL
+                        : document.getElementById('googleModelSelect').value;
+
+                    // Construir parts de Gemini desde userContent (OpenAI → Gemini format)
+                    const geminiParts = [];
+                    for (const part of userContent) {
+                        if (part.type === 'text') {
+                            geminiParts.push({ text: part.text });
+                        } else if (part.type === 'image_url') {
+                            const dataUrl = part.image_url.url;
+                            const [meta, b64] = dataUrl.split(',');
+                            const mime = meta.match(/data:([^;]+)/)[1];
+                            geminiParts.push({ inlineData: { mimeType: mime, data: b64 } });
+                        }
+                    }
+
+                    const geminiBody = {
+                        system_instruction: { parts: [{ text: systemPrompt }] },
+                        contents: [{ role: 'user', parts: geminiParts }],
+                        generationConfig: {
+                            responseMimeType: 'application/json',
+                            temperature: 0.2,
+                            maxOutputTokens: 65536
+                        }
+                    };
+
+                    const gRes = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/${gModel}:generateContent?key=${encodeURIComponent(gKey)}`,
+                        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiBody) }
+                    );
+                    const gData = await gRes.json();
+
+                    if (!gRes.ok) {
+                        throw new Error(`Google AI ${gRes.status}: ${gData?.error?.message || JSON.stringify(gData)}`);
+                    }
+
+                    rawContent = gData?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!rawContent) {
+                        const reason = gData?.candidates?.[0]?.finishReason || 'desconocido';
+                        throw new Error(`Google AI devolvió respuesta vacía. finishReason: "${reason}". Puede que el modelo no soporte JSON o el contenido sea demasiado largo.`);
+                    }
+
+                } else {
+                    // ── OpenRouter ──
+                    const key   = document.getElementById('apiKeyInput').value.trim();
+                    const model = document.getElementById('modelSelect').value;
+
+                    const makeRequest = async (useJsonFormat) => {
+                        const body = {
+                            model,
+                            messages: [
+                                { role: 'system', content: systemPrompt },
+                                { role: 'user',   content: userContent }
+                            ]
+                        };
+                        if (useJsonFormat) body.response_format = { type: 'json_object' };
+                        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                            method: 'POST',
+                            headers: {
+                                "Authorization": `Bearer ${key}`,
+                                "Content-Type": "application/json",
+                                "HTTP-Referer": window.location.href,
+                                "X-Title": "Analizador Curricular"
+                            },
+                            body: JSON.stringify(body)
+                        });
+                        const raw = await response.json();
+                        if (!response.ok) throw new Error(`API ${response.status}: ${raw?.error?.message || raw?.message || JSON.stringify(raw)}`);
+                        if (!raw?.choices?.length) throw new Error(`Respuesta inesperada:
+${JSON.stringify(raw, null, 2)}`);
+                        return raw;
+                    };
+
+                    let data = null, lastError = null;
+                    try {
+                        data = await makeRequest(true);
+                    } catch(err) {
+                        lastError = err;
+                        const e = err.message.toLowerCase();
+                        if (e.includes('response_format') || e.includes('format') || e.includes('400')) {
+                            try { data = await makeRequest(false); lastError = null; } catch(e2) { lastError = e2; }
+                        }
+                    }
+                    if (!data) throw lastError || new Error('No se pudo obtener respuesta.');
+
+                    rawContent = data.choices[0]?.message?.content;
+                    if (!rawContent) {
+                        const fr = data.choices[0]?.finish_reason || 'desconocido';
+                        throw new Error(`Contenido vacío. finish_reason: "${fr}".`);
+                    }
+                }
+
+                // ── Parsear JSON de respuesta ──
+                const aiResult = extractJSON(rawContent);
+                if (!aiResult) throw new Error(`No se pudo parsear el JSON.
+
+${rawContent.substring(0, 800)}${rawContent.length > 800 ? '...' : ''}`);
+                if (!aiResult.analisis_ejercicios || !Array.isArray(aiResult.analisis_ejercicios)) {
+                    throw new Error(`JSON sin "analisis_ejercicios".
+Claves: ${Object.keys(aiResult).join(', ')}
+
+${JSON.stringify(aiResult,null,2).substring(0,600)}`);
+                }
+
+                renderResultados(aiResult.analisis_ejercicios);
+
+            } catch (err) {
+                let tip = '';
+                const msg = err.message.toLowerCase();
+                if (msg.includes('401') || msg.includes('unauthorized')) {
+                    tip = 'Tu API Key parece incorrecta o expirada. Compruébala en openrouter.ai/keys y pulsa <b>Conectar</b> de nuevo.';
+                } else if (msg.includes('402') || msg.includes('credits') || msg.includes('balance')) {
+                    tip = 'Sin créditos en tu cuenta de OpenRouter. Recárgalos en openrouter.ai/credits.';
+                } else if (msg.includes('429') || msg.includes('rate')) {
+                    tip = 'Demasiadas peticiones. Espera unos segundos y vuelve a intentarlo.';
+                } else if (msg.includes('context') || msg.includes('token') || msg.includes('length')) {
+                    tip = 'El contenido es demasiado largo para este modelo. Prueba con un modelo con mayor ventana de contexto (ej: Claude 3.5, GPT-4o, Gemini 1.5 Pro).';
+                } else if (msg.includes('image') || msg.includes('vision') || msg.includes('multimodal')) {
+                    tip = 'El modelo seleccionado no soporta imágenes/PDFs. Para analizar PDFs escaneados usa un modelo con visión: <b>google/gemini-pro-vision</b>, <b>anthropic/claude-3-5-sonnet</b> o <b>openai/gpt-4o</b>.';
+                } else if (msg.includes('json')) {
+                    tip = 'El modelo seleccionado no devolvió JSON válido. Prueba con un modelo más capaz (Claude 3.5 Sonnet, GPT-4o, Gemini 1.5 Pro).';
+                } else if (msg.includes('choices')) {
+                    tip = 'El modelo no devolvió una respuesta con el formato esperado. Prueba con otro modelo o comprueba tu API Key.';
+                }
+                showError(container, 'Error en el análisis', err.message, tip);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-brain mr-2"></i> EJECUTAR ANÁLISIS CURRICULAR COMPLETO';
+            }
+        };
+
+        // Store last results globally for export
+        let lastAnalisis = [];
+
+        function renderResultados(ejercicios) {
+            lastAnalisis = ejercicios;
+            const container = document.getElementById('resultadosContainer');
+            container.innerHTML = '';
+
+            if (!ejercicios || ejercicios.length === 0) {
+                container.innerHTML = `<div style="padding:20px;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.2);border-radius:12px;color:#fde047;font-weight:600;">El modelo no identificó ejercicios en el documento. Comprueba el contenido introducido.</div>`;
+                return;
+            }
+
+            // Recopilar rubrica de un ejercicio (puede estar a nivel ejercicio o apartado)
+            function collectRubrica(ej) {
+                let rows = [];
+                if (Array.isArray(ej.propuesta_rubrica) && ej.propuesta_rubrica.length > 0) rows = ej.propuesta_rubrica;
+                (ej.apartados || []).forEach(apt => {
+                    if (Array.isArray(apt.propuesta_rubrica)) rows = rows.concat(apt.propuesta_rubrica);
+                    if (Array.isArray(apt.rubrica)) rows = rows.concat(apt.rubrica);
+                });
+                return rows;
+            }
+
+            // Recopilar TODA la rubrica global
+            let allRubricaRows = [];
+
+            ejercicios.forEach((ej, ejIdx) => {
+                const card = document.createElement('div');
+                card.className = "ex-card mb-4";
+
+                let html = `
+                    <div class="ex-card-header">
+                        <span style="background:linear-gradient(135deg,rgba(79,142,247,0.3),rgba(124,95,230,0.3));color:white;font-weight:800;font-size:0.8rem;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ejIdx + 1}</span>
+                        <h3 style="font-weight:700;color:white;font-size:0.9rem;">${ej.titulo_ejercicio || 'Ejercicio sin título'}</h3>
+                    </div>
+                    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">`;
+
+                const apartados = ej.apartados || [];
+                apartados.forEach((apt, aptIdx) => {
+                    const criteriosAsignados   = apt.criterios_asignados   || [];
+                    const criteriosDescartados = apt.criterios_descartados || [];
+                    const saberes = apt.saberes_identificados || [];
+
+                    html += `
+                        <div class="apt-block">
+                            <div class="apt-header">
+                                <span style="color:#93c5fd;font-weight:700;font-size:0.82rem;">${apt.referencia || ('Apartado ' + (aptIdx + 1))}</span>
+                            </div>
+                            <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
+                                ${apt.justificacion_criterios ? `<p style="font-size:0.78rem;color:var(--text-dim);font-style:italic;">${apt.justificacion_criterios}</p>` : ''}
+
+                                ${saberes.length > 0 ? `
+                                <div>
+                                    <p style="font-size:0.67rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Saberes identificados</p>
+                                    <div style="display:flex;flex-direction:column;gap:6px;">
+                                        ${saberes.map(s => {
+                                            const criteriosDeSaber = s.criterios_del_saber || s.criterios || [];
+                                            return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+                                                <p style="font-size:0.78rem;font-weight:600;color:#cbd5e1;margin-bottom:6px;">${s.descripcion_saber || s.saber || '—'}</p>
+                                                ${criteriosDeSaber.length > 0 ? `
+                                                <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+                                                    <span style="font-size:0.65rem;color:var(--text-muted);margin-right:2px;">Criterios:</span>
+                                                    ${criteriosDeSaber.map(cod => {
+                                                        const asignado   = criteriosAsignados.some(c => c.codigo === cod || c === cod);
+                                                        const descartado = criteriosDescartados.some(c => c.codigo === cod || c === cod);
+                                                        const style = asignado
+                                                            ? 'background:rgba(34,197,94,0.15);color:#86efac;border:1px solid rgba(34,197,94,0.25);font-weight:700;'
+                                                            : descartado
+                                                            ? 'background:rgba(239,68,68,0.08);color:#f87171;border:1px solid rgba(239,68,68,0.15);text-decoration:line-through;opacity:0.6;'
+                                                            : 'background:rgba(255,255,255,0.05);color:var(--text-muted);border:1px solid rgba(255,255,255,0.08);';
+                                                        return '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.65rem;padding:2px 6px;border-radius:5px;'+style+'">' + cod + '</span>';
+                                                    }).join('')}
+                                                </div>` : ''}
+                                            </div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>` : ''}
+
+                                <div>
+                                    <p style="font-size:0.67rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Criterios evaluados</p>
+                                    ${criteriosAsignados.length > 0 ? `
+                                    <div style="display:flex;flex-direction:column;gap:5px;">
+                                        ${criteriosAsignados.map(c => `
+                                        <div style="display:flex;align-items:flex-start;gap:8px;">
+                                            <span class="badge-criterio" style="margin-top:1px;flex-shrink:0;">${c.codigo || '?'}</span>
+                                            <span style="font-size:0.78rem;color:var(--text-dim);">${c.definicion || ''}</span>
+                                        </div>`).join('')}
+                                    </div>` : '<p style="font-size:0.75rem;color:var(--text-muted);font-style:italic;">Sin criterios asignados</p>'}
+                                </div>
+
+                                ${criteriosDescartados.length > 0 ? `
+                                <details>
+                                    <summary style="font-size:0.67rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px;user-select:none;">
+                                        <i class="fas fa-chevron-right" style="font-size:0.6rem;transition:transform 0.2s;"></i>
+                                        Criterios descartados (${criteriosDescartados.length})
+                                    </summary>
+                                    <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;padding-left:10px;">
+                                        ${criteriosDescartados.map(c => `
+                                        <div style="display:flex;align-items:flex-start;gap:8px;opacity:0.45;">
+                                            <span style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.06);color:#f87171;padding:2px 6px;border-radius:5px;text-decoration:line-through;flex-shrink:0;">${c.codigo || '?'}</span>
+                                            <span style="font-size:0.75rem;color:var(--text-muted);text-decoration:line-through;">${c.definicion || ''}</span>
+                                        </div>`).join('')}
+                                    </div>
+                                </details>` : ''}
+                            </div>
+                        </div>`;
+                });
+
+                // Recoger rubrica de este ejercicio y acumular en global
+                const rubricaEj = collectRubrica(ej);
+                rubricaEj.forEach(r => {
+                    allRubricaRows.push({ _ejercicio: ej.titulo_ejercicio || ('Ejercicio ' + (ejIdx+1)), ...r });
+                });
+
+                card.innerHTML = html + '</div>';
+                container.appendChild(card);
+            });
+
+            // ── RUBRICA GLOBAL ──
+            renderRubricaGlobal(allRubricaRows);
+        }
+
+        function renderRubricaGlobal(rows) {
+            const section = document.getElementById('rubricaGlobalSection');
+            const cont = document.getElementById('rubricaGlobalContainer');
+            if (!rows || rows.length === 0) { section.classList.add('hidden'); return; }
+            section.classList.remove('hidden');
+
+            const tableRows = rows.map(r => {
+                const criterios = (r.criterios_relacionados || []).join(', ');
+                return `<tr>
+                    <td style="min-width:160px;vertical-align:top;">
+                        <p style="font-weight:700;font-size:0.75rem;color:var(--text);">${r.apartado_ref || '—'}</p>
+                        <p style="font-size:0.65rem;color:var(--text-muted);margin-top:2px;">${r._ejercicio || ''}</p>
+                    </td>
+                    <td style="min-width:100px;vertical-align:top;">
+                        <p style="font-size:0.68rem;color:#93c5fd;font-family:'JetBrains Mono',monospace;">${criterios || '—'}</p>
+                    </td>
+                    <td style="font-size:0.72rem;color:#d1fae5;background:rgba(22,163,74,0.05);vertical-align:top;min-width:160px;">${r.nivel_4 || '<span style="color:rgba(255,255,255,0.15);">—</span>'}</td>
+                    <td style="font-size:0.72rem;color:#dbeafe;background:rgba(59,130,246,0.05);vertical-align:top;min-width:160px;">${r.nivel_3 || '<span style="color:rgba(255,255,255,0.15);">—</span>'}</td>
+                    <td style="font-size:0.72rem;color:#fef9c3;background:rgba(234,179,8,0.05);vertical-align:top;min-width:160px;">${r.nivel_2 || '<span style="color:rgba(255,255,255,0.15);">—</span>'}</td>
+                    <td style="font-size:0.72rem;color:#ffedd5;background:rgba(249,115,22,0.05);vertical-align:top;min-width:160px;">${r.nivel_1 || '<span style="color:rgba(255,255,255,0.15);">—</span>'}</td>
+                    <td style="font-size:0.72rem;color:#fee2e2;background:rgba(239,68,68,0.05);vertical-align:top;min-width:120px;">${r.nivel_0 || '<span style="color:rgba(255,255,255,0.15);">—</span>'}</td>
+                </tr>`;
+            }).join('');
+
+            cont.innerHTML = `<table class="rubrica-table">
+                <thead>
+                    <tr>
+                        <th style="min-width:160px;">Ejercicio / Apartado</th>
+                        <th style="min-width:100px;">Criterios</th>
+                        <th class="th-4 text-center" style="min-width:160px;"><span class="score-badge" style="background:#16a34a;">4</span><div style="font-size:0.65rem;margin-top:3px;">Perfecto</div></th>
+                        <th class="th-3 text-center" style="min-width:160px;"><span class="score-badge" style="background:#3b82f6;">3</span><div style="font-size:0.65rem;margin-top:3px;">Casi bien</div></th>
+                        <th class="th-2 text-center" style="min-width:160px;"><span class="score-badge" style="background:#ca8a04;">2</span><div style="font-size:0.65rem;margin-top:3px;">A medias</div></th>
+                        <th class="th-1 text-center" style="min-width:160px;"><span class="score-badge" style="background:#ea580c;">1</span><div style="font-size:0.65rem;margin-top:3px;">Casi mal</div></th>
+                        <th class="th-0 text-center" style="min-width:120px;"><span class="score-badge" style="background:#dc2626;">0</span><div style="font-size:0.65rem;margin-top:3px;">En blanco</div></th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>`;
+        }
+
+        // ── EXPORTAR CSV ──
+        function exportCSV() {
+            if (!lastAnalisis || lastAnalisis.length === 0) { alert('Ejecuta primero el analisis.'); return; }
+
+            function esc(val) {
+                const s = String(val || '').replace(/"/g, '""').replace(/\n/g, ' ');
+                return '"' + s + '"';
+            }
+
+            const rows = [['Ejercicio / Apartado', 'Criterios', 'Nivel 4 (Perfecto)', 'Nivel 3 (Casi bien)', 'Nivel 2 (A medias)', 'Nivel 1 (Casi mal)', 'Nivel 0 (En blanco)']];
+
+            lastAnalisis.forEach((ej, ejIdx) => {
+                const titulo = ej.titulo_ejercicio || ('Ejercicio ' + (ejIdx+1));
+                function collectR(e) {
+                    let r = [];
+                    if (Array.isArray(e.propuesta_rubrica)) r = r.concat(e.propuesta_rubrica);
+                    (e.apartados||[]).forEach(a => {
+                        if (Array.isArray(a.propuesta_rubrica)) r = r.concat(a.propuesta_rubrica);
+                        if (Array.isArray(a.rubrica)) r = r.concat(a.rubrica);
+                    });
+                    return r;
+                }
+                collectR(ej).forEach(r => {
+                    const criterios = (r.criterios_relacionados || []).join(', ');
+                    const ref = r.apartado_ref ? titulo + ' — ' + r.apartado_ref : titulo;
+                    rows.push([ref, criterios, r.nivel_4||'', r.nivel_3||'', r.nivel_2||'', r.nivel_1||'', r.nivel_0||'']);
+                });
+            });
+
+            const csv = rows.map(r => r.map(esc).join(',')).join('\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'rubrica_curricular.csv';
+            a.click();
+        }
+
+        // ── EXPORTAR PDF ──
+        function exportPDF() {
+            if (!lastAnalisis || lastAnalisis.length === 0) { alert('Ejecuta primero el analisis.'); return; }
+
+            const section = document.getElementById('resultadosSection');
+            const exportBtn = document.querySelector('[onclick="exportPDF()"]');
+            const csvBtn = document.querySelector('[onclick="exportCSV()"]');
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '<span class="loader"></span> Generando PDF...';
+            csvBtn.style.display = 'none';
+
+            // Clonar para PDF sin la barra de botones
+            const clone = section.cloneNode(true);
+            clone.querySelector('.glass-panel').remove(); // quitar barra exportacion
+            clone.style.display = 'block';
+            clone.style.padding = '20px';
+            clone.style.background = 'white';
+
+            const opt = {
+                margin: [10, 8, 10, 8],
+                filename: 'informe_curricular.pdf',
+                image: { type: 'jpeg', quality: 0.92 },
+                html2canvas: { scale: 1.5, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(clone).save().then(() => {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = '<i class="fas fa-file-pdf"></i> Descargar Informe PDF';
+                csvBtn.style.display = '';
+            }).catch(e => {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = '<i class="fas fa-file-pdf"></i> Descargar Informe PDF';
+                csvBtn.style.display = '';
+                alert('Error generando PDF: ' + e.message);
+            });
+        }
+    </script>
+</body>
+</html>
